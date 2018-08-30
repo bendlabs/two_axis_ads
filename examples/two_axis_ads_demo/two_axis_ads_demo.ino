@@ -130,8 +130,6 @@ void parse_serial_port(void)
       ads_two_axis_calibrate(ADS_CALIBRATE_PERP, 90);
     else if(key == 'c')
       ads_two_axis_calibrate(ADS_CALIBRATE_CLEAR, 0);
-    else if(key == 'k')
-      ads_two_axis_calibrate((ADS_CALIBRATION_STEP_T)0x55, 90);
     else if(key == 'r')
       ads_two_axis_run(true);
     else if(key == 's')
