@@ -94,19 +94,11 @@ int ads_two_axis_update_device_address(uint8_t device, uint8_t address)
 	if(ads_hal_write_buffer(buffer, ADS_TRANSFER_SIZE) != ADS_OK)
 		return ADS_ERR_IO;
 	
-	return ads_hal_update_device_addr(device, address);	
+	ads_hal_set_address(address);
+	
+	return ADS_OK;
 }
 
-/**
- * @brief Updates selected device number the HAL is communicating with
- *
- * @param	device number 0-9 
- * @return	ADS_OK if successful ADS_ERR_BAD_PARAM if failed
- */
-int ads_two_axis_select_device(uint8_t device)
-{
-	return ads_hal_select_device(device);
-}
 
 /**
  * @brief Initializes the hardware abstraction layer and sample rate of the ADS
@@ -121,24 +113,26 @@ int ads_two_axis_init(ads_init_t * ads_init)
 	ads_data_callback = ads_init->ads_sample_callback;
 	
 	// Check that the device id matched ADS_TWO_AXIS
-	if(ads_get_dev_id() != ADS_OK)
+	// Check that the device type is a one axis
+	ADS_DEV_TYPE_T ads_dev_type;
+	if (ads_get_dev_type(&ads_dev_type) != ADS_OK)
 		return ADS_ERR_DEV_ID;
+
+	switch (ads_dev_type)
+	{
+	case ADS_DEV_TWO_AXIS_V1:
+	case ADS_DEV_TWO_AXIS_V2:
+		break;
+	default:
+		return ADS_ERR_DEV_ID;
+	}
 	
 	ads_hal_delay(2);
- 	
-#if ADS_DFU_CHECK
- 	if(ads_two_axis_dfu_check((uint8_t)ADS_GET_FW_VER))
-	{
-		ads_two_axis_dfu_reset();
-		ads_hal_delay(100);		// Give ADS time to reset
- 		if(ads_two_axis_dfu_update() != ADS_OK)
-			return ADS_ERR;
-		ads_hal_delay(200);	// Let it reinitialize
-	}
-#endif
 
 	if(ads_two_axis_set_sample_rate(ads_init->sps))
 		return ADS_ERR;
+
+	ads_hal_delay(2);
 
 	return ADS_OK;
 }
@@ -230,6 +224,30 @@ int ads_two_axis_wake(void)
  */
 int ads_get_dev_id(void)
 {
+	ADS_DEV_TYPE_T device_type;
+	
+	if (ads_get_dev_type(&device_type) == ADS_OK)
+	{
+		switch (device_type)
+		{
+		case ADS_DEV_TWO_AXIS_V1:
+		case ADS_DEV_TWO_AXIS_V2:
+			return ADS_OK;
+		}
+	}
+	
+	return ADS_ERR_DEV_ID;
+}
+
+ /**
+ * @brief Returns the device type in device_type. ADS should not be in free run
+ * 			when this function is called.
+ *
+ * @param device_type  recipient of the device type
+ * @return	ADS_OK if dev_id is one of ADS_DEV_TYPE_T, ADS_ERR_DEV_ID if not
+ */
+int ads_get_dev_type(ADS_DEV_TYPE_T * ads_dev_type)
+{
 	uint8_t buffer[ADS_TRANSFER_SIZE];
 	
 	buffer[0] = ADS_GET_DEV_ID;
@@ -243,14 +261,19 @@ int ads_get_dev_id(void)
 	
 	ads_hal_pin_int_enable(true);
 	
-	/* Check that packet read is a device id packet and that
-	 * and that the device id is a two axis sensor */
-	if(buffer[0] == ADS_DEV_ID && buffer[1] == ADS_TWO_AXIS)
+	if (buffer[0] == ADS_DEV_ID)
 	{
-		return ADS_OK;
+		switch (buffer[1])
+		{
+		case ADS_DEV_ONE_AXIS_V1:
+		case ADS_DEV_ONE_AXIS_V2:
+		case ADS_DEV_TWO_AXIS_V1:
+		case ADS_DEV_TWO_AXIS_V2:
+			*ads_dev_type = static_cast<ADS_DEV_TYPE_T>(buffer[1]);
+			return ADS_OK;
+		}
 	}
-	else
-	{
-		return ADS_ERR_DEV_ID;
-	}
+	
+	*ads_dev_type = ADS_DEV_UNKNOWN;
+	return ADS_ERR_DEV_ID;
 }

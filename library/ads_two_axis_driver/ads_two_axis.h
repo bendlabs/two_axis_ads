@@ -36,6 +36,12 @@ typedef enum {
 	ADS_500_HZ = 32,
 } ADS_SPS_T;
 
+/* Device IDS */
+typedef enum {
+	ADS_ONE_AXIS = 1,
+	ADS_TWO_AXIS = 2,
+} ADS_DEV_IDS_T;
+
 typedef struct {
 	ADS_SPS_T sps;
 	ads_callback ads_sample_callback;
@@ -135,5 +141,14 @@ int ads_two_axis_wake(void);
  * @return	ADS_OK if dev_id is ADS_TWO_AXIS, ADS_ERR_DEV_ID if not
  */
 int ads_get_dev_id(void);
+
+ /**
+ * @brief Returns the device type in ads_dev_type. ADS should not be in free run
+ * 			when this function is called.
+ *
+ * @param ads_dev_type  recipient of the device type
+ * @return	ADS_OK if dev_id is one of ADS_DEV_TYPE_T, ADS_ERR_DEV_ID if not
+ */
+ int ads_get_dev_type(ADS_DEV_TYPE_T * ads_dev_type);
 
 #endif /* ADS_TWO_AXIS_H_ */
