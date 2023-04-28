@@ -46,7 +46,7 @@ static void ads_hal_pin_int_init(void);
  * @param len			Length of buffer.
  * @return	ADS_OK if successful ADS_ERR_IO if failed
  */
-void ads_hal_interrupt(void)
+void ICACHE_RAM_ATTR ads_hal_interrupt(void)
 {
 	if(ads_hal_read_buffer(read_buffer, ADS_TRANSFER_SIZE) == ADS_OK)
 	{
