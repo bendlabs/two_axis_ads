@@ -1,10 +1,25 @@
 /**
- * Created by cottley on 6/6/2018.
+ * Created by nrudh on 1/15/2025.
+ * 
+ * This software is provided "as is", without any warranty of any kind, express or implied,
+ * including but not limited to the warranties of merchantability, fitness for a particular purpose,
+ * and noninfringement. In no event shall the authors or copyright holders be liable for any claim,
+ * damages, or other liability, whether in an action of contract, tort, or otherwise, arising from,
+ * out of, or in connection with the software or the use or other dealings in the software.
  */
 
 #include "ads_two_axis_dfu.h"
-#include "ads_two_axis_fw.h"
 #include <string.h>
+
+#if ADS_FW_INCLUDE_ADS_V1 == 1
+#include "ads_two_axis_fw.h"
+#endif
+
+#if ADS_FW_INCLUDE_ADS_V2 == 1
+#include "ads_two_axis_fw_v2.h"
+#endif
+
+#include "ads_two_axis_fw_v2.h"
 
 #define ADS_BOOTLOADER_ADDRESS (0x12)
 
@@ -19,7 +34,7 @@ static inline int ads_two_axis_dfu_get_ack(void);
  */
 bool ads_two_axis_dfu_check(uint8_t ads_get_fw_ver)
 {
-	uint8_t buffer[] = {ads_get_fw_ver, 0, 0};
+	uint8_t buffer[] = {ADS_GET_FW_VER, 0, 0};
 	uint16_t fw_ver;
 	
 	ads_hal_pin_int_enable(false);
@@ -33,15 +48,20 @@ bool ads_two_axis_dfu_check(uint8_t ads_get_fw_ver)
 	if(buffer[0] == ADS_FW_VER)
 	{
 		fw_ver = ads_uint16_decode(&buffer[1]);
-		fw_ver = ads_uint16_decode(&buffer[1]);
 	}
 	else
 	{
 		return false;
 	}
+
+#if ADS_FW_INCLUDE_ADS_V1 == 1
+    return fw_ver < ads_fw_rev;
+#endif
+	
+#if ADS_FW_INCLUDE_ADS_V2 == 1
+		return fw_ver < ads_fw_v2_rev;
+#endif
 		
-	if(fw_ver < ads_fw_rev)
-		return true;
 	return false;
 }
 
@@ -89,8 +109,25 @@ static inline int ads_two_axis_dfu_get_ack(void)
  */
 int ads_two_axis_dfu_update(void)
 {
-	uint32_t len = sizeof(ads_fw);
+  const uint8_t * fw = NULL;
+	uint32_t len = 0;
 	
+#if ADS_FW_INCLUDE_ADS_V1 == 1
+  fw = ads_fw;
+  len = sizeof(ads_fw);
+#endif
+
+#if ADS_FW_INCLUDE_ADS_V2 == 1
+  fw = ads_two_axis_fw_v2;
+  len = sizeof(ads_two_axis_fw_v2);
+#endif
+
+fw = ads_two_axis_fw_v2;
+  len = sizeof(ads_two_axis_fw_v2);
+
+	if (fw == NULL || len == 0)
+		return ADS_ERR_DEV_ID;
+
 	uint8_t page_size   = 64;
 	uint8_t block_len   = page_size;
 	
@@ -125,7 +162,7 @@ int ads_two_axis_dfu_update(void)
 	for(uint32_t i = 0; i < nb_blocks; i++)
 	{
 		// Copy the next page
-		memcpy(packet, &ads_fw[i*page_size], page_size);
+		memcpy(packet, &fw[i*page_size], page_size);
 		
 		// Send the page
 		ads_hal_write_buffer(packet, page_size/2);
@@ -142,7 +179,7 @@ int ads_two_axis_dfu_update(void)
 	}
 	
 	// Transfer the remainder and get acknowledgement
-	memcpy(packet, &ads_fw[nb_blocks*block_len], rem_data);
+	memcpy(packet, &fw[nb_blocks*block_len], rem_data);
 	
 	if(rem_data > page_size/2)
 	{
