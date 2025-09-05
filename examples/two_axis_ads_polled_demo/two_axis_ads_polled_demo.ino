@@ -18,10 +18,8 @@
 #include "Arduino.h"
 #include "ads_two_axis.h"
 
-
 #define ADS_RESET_PIN       (4)         // Pin number attached to ads reset line.
 #define ADS_INTERRUPT_PIN   (3)         // Pin number attached to the ads data ready line.  
-
 
 // function prototypes
 void ads_data_callback(float * sample);
@@ -67,8 +65,7 @@ void deadzone_filter(float * sample)
 }
 
 void ads_data_callback(float * sample)
-{
-  
+{ 
 }
 
 void setup() {
@@ -100,48 +97,41 @@ void setup() {
 
   delay(100);
 
-  // Start reading data!
- // ads_two_axis_run(true);
+  // Start reading data in polled mode
   ads_two_axis_polled(true); //polled test
 
   delay(10);
-
 }
 
 void loop() {
 
   /*test for polled mode */
   float sample[2];
-  uint8_t data_type;
 
   // Read data from the one axis ads sensor
-  int ret_val = ads_two_axis_read_polled(sample, &data_type);
+  int ret_val = ads_two_axis_read_polled(sample);
 
   // Check if read was successfull
   if(ret_val == ADS_OK)
   {
-    if(data_type == ADS_SAMPLE)
-    {
-      // Low pass IIR filter
-      signal_filter(sample);
+    // Low pass IIR filter
+    signal_filter(sample);
 
-      // Deadzone filter
-      deadzone_filter(sample);
+    // Deadzone filter
+    deadzone_filter(sample);
 
-      Serial.print(sample[0]); 
-      Serial.print(",");
-      Serial.println(sample[1]);
-    }
+    Serial.print(sample[0]); 
+    Serial.print(",");
+    Serial.println(sample[1]);
   }
-  
   
   if(Serial.available())
   {
     parse_serial_port();
   }
 
-  delay(10);  
-
+  // Delay 10ms to keep 100 Hz sampling rate, Do not increase rate past 500 Hz.
+  delay(10);
 }
 
 /* Function parses received characters from the COM port for commands */
@@ -157,14 +147,4 @@ void parse_serial_port(void)
       ads_two_axis_calibrate(ADS_CALIBRATE_PERP, 90);
     else if(key == 'c')
       ads_two_axis_calibrate(ADS_CALIBRATE_CLEAR, 0);
-    else if(key == 'r')
-      ads_two_axis_run(true);
-    else if(key == 's')
-      ads_two_axis_run(false);
-    else if(key == 'f')
-      ads_two_axis_set_sample_rate(ADS_200_HZ);
-    else if(key == 'u')
-      ads_two_axis_set_sample_rate(ADS_10_HZ);
-    else if(key == 'n')
-      ads_two_axis_set_sample_rate(ADS_100_HZ);
 }

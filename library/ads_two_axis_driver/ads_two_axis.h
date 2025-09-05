@@ -18,10 +18,7 @@
 #include "ads_two_axis_dfu.h"
 #include "ads_two_axis_util.h"
 
-#define ADS_DFU_CHECK				(1)		// Set this to 1 to check if the newest firmware is on the ADS
-
 typedef void (*ads_callback)(float*);
-
 
 typedef enum {
 	ADS_CALIBRATE_FIRST = 0,
@@ -57,12 +54,28 @@ typedef struct {
 
 
 /**
+ * @brief Reads ADS sample data when ADS is in polled mode
+ *
+ * @param	sample[out]		floating point array returns new samples
+ * @return	ADS_OK if successful ADS_ERR_IO if failed
+ */
+int ads_two_axis_read_polled(float * sample);
+
+/**
  * @brief Places ADS in free run or sleep mode
  *
  * @param	run	true if activating ADS, false is putting in suspend mode
  * @return	ADS_OK if successful ADS_ERR_IO if failed
  */
 int ads_two_axis_run(bool run);
+
+/**
+ * @brief Places ADS in poll mode or sleep. Each time sensor data is read a new sample is taken
+ *
+ * @param	poll	true if activating ADS, false is putting in suspend mode
+ * @return	ADS_OK if successful ADS_ERR_IO if failed
+ */
+int ads_two_axis_polled(bool poll); 
 
 /**
  * @brief Sets the sample rate of the ADS in free run mode

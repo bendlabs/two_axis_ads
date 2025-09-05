@@ -33,6 +33,37 @@ void ads_two_axis_parse_read_buffer(uint8_t * buffer)
 	}
 }
 
+/*test for polled mode */
+int ads_two_axis_read_polled(float * sample)
+{
+	uint8_t buffer[ADS_TRANSFER_SIZE];
+	int16_t temp;
+	
+	// Read data from sensor
+	int ret_val = ads_hal_read_buffer(buffer, ADS_TRANSFER_SIZE);
+
+	// Parse data if successful read 
+	if(ret_val == ADS_OK)
+	{
+		// Check that read packet is a data packet
+		if(buffer[0] == ADS_SAMPLE)
+		{
+			temp = ads_int16_decode(&buffer[1]);
+      		sample[0] = (float)temp / 32.0f;
+
+      		temp = ads_int16_decode(&buffer[3]);
+      		sample[1] = (float)temp / 32.0f;
+		}
+		else 
+		{
+			ret_val = ADS_ERR; // Set to general error, data packet not found
+		}
+	}
+  
+	return ret_val;
+}
+
+
 /**
  * @brief Places ADS in free run or sleep mode
  *
@@ -49,6 +80,18 @@ int ads_two_axis_run(bool run)
 	return ads_hal_write_buffer(buffer, ADS_TRANSFER_SIZE);
 }
 
+//test for polled mode 
+int ads_two_axis_polled(bool poll)
+{
+	uint8_t buffer[ADS_TRANSFER_SIZE];
+		
+	buffer[0] = ADS_POLLED_MODE;
+	buffer[1] = poll;
+		
+	return ads_hal_write_buffer(buffer, ADS_TRANSFER_SIZE);
+}
+
+
 /**
  * @brief Sets the sample rate of the ADS in free run mode
  *
@@ -61,22 +104,6 @@ int ads_two_axis_set_sample_rate(ADS_SPS_T sps)
 	
 	buffer[0] = ADS_SPS;
 	ads_uint16_encode(sps, &buffer[1]);
-	
-	return ads_hal_write_buffer(buffer, ADS_TRANSFER_SIZE);
-}
-
-/**
- * @brief Enables the ADS data ready interrupt line
- *
- * @param	run	true if activating ADS, false is putting in suspend mode
- * @return	ADS_OK if successful ADS_ERR_IO if failed
- */
-int ads_two_axis_enable_interrupt(bool enable)
-{
-	uint8_t buffer[ADS_TRANSFER_SIZE];
-	
-	buffer[0] = ADS_INTERRUPT_ENABLE;
-	buffer[1] = enable;
 	
 	return ads_hal_write_buffer(buffer, ADS_TRANSFER_SIZE);
 }
@@ -266,7 +293,7 @@ int ads_get_dev_type(ADS_DEV_TYPE_T * ads_dev_type)
 	ads_hal_read_buffer(buffer, ADS_TRANSFER_SIZE);
 	
 	ads_hal_pin_int_enable(true);
-	
+
 	if (buffer[0] == ADS_DEV_ID)
 	{
 		switch (buffer[1])
