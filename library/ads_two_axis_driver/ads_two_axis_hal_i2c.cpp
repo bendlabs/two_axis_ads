@@ -60,7 +60,6 @@ void ads_hal_interrupt(void)
 
 static void ads_hal_pin_int_init(void)
 {
-	pinMode(ADS_INTERRUPT_PIN, INPUT_PULLUP);
 	ads_hal_pin_int_enable(true);
 }
 
@@ -182,6 +181,9 @@ int ads_hal_init(void (*callback)(uint8_t*), uint32_t reset_pin, uint32_t datard
 	// Set callback pointer
 	ads_read_callback = callback;
 	
+    // configure interrupt pin default
+	pinMode(ADS_INTERRUPT_PIN, INPUT_PULLUP);
+
 	// Reset the ads
 	ads_hal_reset();
 	
